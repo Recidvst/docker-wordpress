@@ -1,0 +1,65 @@
+version: '3.3'
+
+services:
+   db:
+     image: mysql:5.7
+     volumes:
+       - db_data:/var/lib/mysql
+     restart: always
+     environment:
+       MYSQL_ROOT_PASSWORD: rootpassword
+       MYSQL_DATABASE: wordpress
+       MYSQL_USER: wordpress
+       MYSQL_PASSWORD: wordpress
+
+   wordpress:
+     depends_on:
+       - db
+     image: wordpress:latest
+     restart: always
+     ports:
+       - "8000:80"
+     environment:
+       WORDPRESS_DB_HOST: db:3306
+       WORDPRESS_DB_NAME: wordpress
+       WORDPRESS_DB_USER: wordpress
+       WORDPRESS_DB_PASSWORD: wordpress
+     working_dir: /var/www/html
+     volumes:
+       - ./html:/var/www/html
+
+   wpcli:
+     # run wpcli commands like... docker-compose run --rm wpcli core version
+     depends_on:
+      - db
+      - wordpress
+     image: wordpress:cli
+     # This is required to run wordpress-cli with the same user-id as wordpress
+     # The xfs user in the wordpress:cli image has the UID 33, which is the same UID as the www-data user in the wordpress:latest image.
+     user: xfs
+     entrypoint: wp
+     # Just checking the cli is up and running
+     command: >
+      core version
+     volumes:
+       - ./html:/var/www/html
+
+   phpmyadmin:
+      depends_on:
+         - db
+      image: phpmyadmin/phpmyadmin
+      environment:
+        PMA_HOST: db
+        PMA_PORT: 3306
+        MYSQL_ROOT_PASSWORD: rootpassword
+      ports:
+        - 127.0.0.1:8080:80
+      links:
+        - db:db
+
+volumes:
+    db_data: {}
+    wp_data:
+
+# docker-compose up -d
+# docker-compose down
